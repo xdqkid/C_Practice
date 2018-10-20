@@ -1,7 +1,0 @@
-6
-[PVG, CAN]
-[CAN, PEK]
-[PVG, CTU]
-[CTU, DLC]
-[DLC, HAK]
-[HAK, LXA]
