@@ -43,7 +43,7 @@ int solve_1D()
 }
 int main(void)
 {
-    // solve_1D();
+    solve_1D();
     solve_2D();
     return 0;
 }
