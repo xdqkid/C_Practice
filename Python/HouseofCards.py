@@ -284,7 +284,6 @@ def main():
         else:
             order[9] = "Axel"
         # 玩家交替轮流
-        # for i in range(10, 2 * n + 2):
         for i in range(10, 30):
             if order[i - 1] == "Birgit":
                 order[i] = "Axel"
