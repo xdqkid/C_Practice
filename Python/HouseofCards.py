@@ -1,4 +1,5 @@
 import copy
+from graphviz import Digraph
 class dat_que(object):
 
     def init(self, dir, poi): 
@@ -19,6 +20,9 @@ order = ["" for _ in range(30)] # 记录每个回合出手的人的名字
 
 INF = 100000
 n = 0 # n为最大分值
+pruning = True 
+node_count = 0
+Draw = True
 
 def calc_hold_card(ax_hold, bi_hold):
     """
@@ -99,6 +103,13 @@ def dfs(pha, ax_hold, bi_hold, maxn):
     Return:
         从当前状态出发计算走方玩家的得分
     """
+    if Draw:
+        global node_count
+        global dot
+        node_count = 0
+        dot.node(str(node_count), str(pha) + ',' + str(ax_hold) + ',' + str(bi_hold) + ',' + str(maxn))
+        dot.edge(str(node_count), 'L', constraint='false')
+
     # 若一轮游戏结束，则计算得分s
     if pha > 2 * n:
         s = calc_hold_card(ax_hold, bi_hold)
@@ -122,8 +133,9 @@ def dfs(pha, ax_hold, bi_hold, maxn):
     # tmp是对手取得的最大分数，因而是负值
     rec = update(rec, -tmp) 
     # 剪枝
-    if maxn >= -rec: 
-        return rec
+    if pruning:
+        if maxn >= -rec: 
+            return rec
     # 卡牌最多13张，组合valley或peak最多有6个，故循环2~6
     # Floor操作
     for i in range(2, 7):
@@ -140,8 +152,9 @@ def dfs(pha, ax_hold, bi_hold, maxn):
             que[i] = temp_que[i]
             que[i + 1] = temp_que[i + 1]
             # 剪枝
-            if maxn >= -rec:
-                return rec 
+            if pruning:
+                if maxn >= -rec:
+                    return rec 
 
             # 若当前玩家A有“握牌”
             if order[pha] == "Axel" and ax_hold != -1:
@@ -169,8 +182,9 @@ def dfs(pha, ax_hold, bi_hold, maxn):
             que[i] = temp_que[i]
             que[i + 1] = temp_que[i + 1]
             # 剪枝
-            if maxn >= -rec: 
-                return rec
+            if pruning:
+                if maxn >= -rec: 
+                    return rec
     
     # Peak操作
     for i in range(2, 7): 
@@ -192,8 +206,9 @@ def dfs(pha, ax_hold, bi_hold, maxn):
                 que[i] = temp_que[i]
                 que[i + 1] = temp_que[i + 1]
                 # 剪枝
-                if maxn >= -rec:
-                    return rec
+                if pruning:
+                    if maxn >= -rec:
+                        return rec
                 # 计算第i, A握牌和走牌的三角形分数
                 calc = calc_digit(pha, que[i].poi, ax_hold, pha)
                 # A的握牌放入第i个位置，走牌放入第i + 1个位置，形成peak
@@ -209,8 +224,9 @@ def dfs(pha, ax_hold, bi_hold, maxn):
                 que[i] = temp_que[i]
                 que[i + 1] = temp_que[i + 1]
                 # 剪枝
-                if maxn >= -rec:
-                    return rec
+                if pruning:
+                    if maxn >= -rec:
+                        return rec
             # 若当前玩家为B且有握牌
             elif order[pha] == "Birgit" and bi_hold != -1:
                 # 计算第i个位置的牌、B的握牌和走牌的三角形分数
@@ -228,8 +244,9 @@ def dfs(pha, ax_hold, bi_hold, maxn):
                 que[i] = temp_que[i]
                 que[i + 1] = temp_que[i + 1]
                 # 剪枝
-                if maxn >= -rec:
-                    return rec
+                if pruning:
+                    if maxn >= -rec:
+                        return rec
                 # 计算第i个位置的牌, B握牌和走牌的三角形分数
                 calc = calc_digit(pha, que[i].poi, bi_hold, pha)
                 # B 的握牌放入第i个位置，走牌放入第i + 1个位置，形成peak
@@ -242,11 +259,13 @@ def dfs(pha, ax_hold, bi_hold, maxn):
                 que[i] = temp_que[i]
                 que[i + 1] = temp_que[i + 1]
                 # 剪枝
-                if maxn >= -rec:
-                    return rec
+                if pruning:
+                    if maxn >= -rec:
+                        return rec
     return rec
 
 def main():
+    global pruning
     t = 0
     while True:
         t += 1
@@ -289,6 +308,12 @@ def main():
                 order[i] = "Axel"
             else:
                 order[i] = "Birgit"
+        
+        global node_count
+        global dot
+        node_count = 0
+        dot = Digraph(comment='Search Graph')
+
         # 计算name得分
         ans = dfs(9, -1, -1, -INF)
         if order[9] != name:
