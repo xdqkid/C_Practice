@@ -18,41 +18,43 @@ card = [data_card() for _ in range(30)] # 纸牌顺序
 
 order = ["" for _ in range(30)] # 记录每个回合出手的人的名字
 
-INF = 100000
+INF = 1000
 n = 0 # n为最大分值
 pruning = True 
-node_count = 0
-Draw = True
+# pruning = False
 
-def calc_hold_card(ax_hold, bi_hold):
+def calc_hold_card(Axel_hold, Birgit_hold):
     """
     一轮结束时，计算分数
     Args:
-        ax_hold : Axel的握牌
-        bi_hold : Birgit的握牌
+        Axel_hold : Axel的握牌
+        Birgit_hold : Birgit的握牌
     Return:
         返回输赢分数
     """ 
     s = 0
     # 若A还有握牌，则比较牌色与A的颜色．决定其分数是加入或减去握牌分数
-    if ax_hold != -1:
-        if card[ax_hold].col == 'R':
-            s += card[ax_hold].dig
+    if Axel_hold != -1:
+        if card[Axel_hold].col == 'R':
+            s += card[Axel_hold].dig
         else:
-            s -= card[ax_hold].dig
+            s -= card[Axel_hold].dig
     # 若B还有握牌，则比较牌色与B的颜色．决定其分数是加入或减去握牌分数
-    if bi_hold != -1: 
-        if card[bi_hold].col == 'B':
-            s -= card[bi_hold].dig
+    if Birgit_hold != -1: 
+        if card[Birgit_hold].col == 'B':
+            s -= card[Birgit_hold].dig
         else:
-            s += card[bi_hold].dig
+            s += card[Birgit_hold].dig
     return s
 
-def update(rec, s) : 
+def update(fo, calc, fson) : 
     """
-        调整参数 rec = max rec, s
+        调整参数 f[o] = max (calc - f[son])
+        注意： fson可能是非法操作，须要剪去
     """
-    return s if s > rec else rec
+    if fson != -INF:
+        return max(fo, calc - fson)
+    return fo
 
 def calc_digit(pha, pl, p2, p3):
     """
@@ -91,28 +93,23 @@ def calc_digit(pha, pl, p2, p3):
         else:
             return -dig
 
-def dfs(pha, ax_hold, bi_hold, maxn):
+def dfs(pha, Axel_hold, Birgit_hold, fo_calc):
     """
     Args:
-        pha: 第pha回合
-        ax_hold：A的握牌
-        bi_hold：B的握牌
-        maxn：传递参数, 
+        pha         : 第pha回合
+        Axel_hold   ：A的握牌
+        Birgit_hold ：B的握牌
+        fo_calc     ：传递参数, 
                 f[o] = max (calc - f[son])
-                这里传递的是,fson - calc
+                这里传递的是,fo - calc
     Return:
         从当前状态出发计算走方玩家的得分
     """
-    if Draw:
-        global node_count
-        global dot
-        node_count = 0
-        dot.node(str(node_count), str(pha) + ',' + str(ax_hold) + ',' + str(bi_hold) + ',' + str(maxn))
-        dot.edge(str(node_count), 'L', constraint='false')
+    global pruning
 
     # 若一轮游戏结束，则计算得分s
     if pha > 2 * n:
-        s = calc_hold_card(ax_hold, bi_hold)
+        s = calc_hold_card(Axel_hold, Birgit_hold)
         # 若当前回合是A走，则返回s，否则返回s的负数
         if order[pha] == "Axel":
             return s
@@ -121,22 +118,24 @@ def dfs(pha, ax_hold, bi_hold, maxn):
     # 预保留que，以便回溯恢复“握牌”操作
     temp_que = copy.deepcopy(que)
     # 当前回合得分初始化
-    rec = -INF
+    fo = -INF
     # 对手得分初始化
-    tmp = INF
+    fson = INF
+    # 当前操作得分
+    calc = 0
     # 当前回合是A走牌且暂无握牌，则递归计算下一回合B的最大得分（A握住第pha张牌)
-    if order[pha] == "Axel" and ax_hold == -1: 
-        tmp = dfs(pha + 1, pha, bi_hold, rec)
+    if order[pha] == "Axel" and Axel_hold == -1: 
+        fson = dfs(pha + 1, pha, Birgit_hold, fo)
     # 当前回合是B走牌且暂无握牌，则递归计算下一回合B的最大得分（B握住第pha张牌)
-    elif order[pha] == "Birgit" and bi_hold == -1:
-        tmp = dfs(pha + 1, ax_hold, pha, rec) 
-    # tmp是对手取得的最大分数，因而是负值
-    rec = update(rec, -tmp) 
+    elif order[pha] == "Birgit" and Birgit_hold == -1:
+        fson = dfs(pha + 1, Axel_hold, pha, fo) 
+    # fson是对手取得的最大分数，因而是负值
+    fo = update(fo, calc, fson) 
     # 剪枝
     if pruning:
-        if maxn >= -rec: 
-            return rec
-    # 卡牌最多13张，组合valley或peak最多有6个，故循环2~6
+        if fo_calc >= -fo: 
+            return fo
+    # 卡牌最多13张,故循环2~6
     # Floor操作
     for i in range(2, 7):
         # 若第i,i+1张牌构成peak，则计算第i,i+1张牌和玩家pha的三角形分数
@@ -146,123 +145,127 @@ def dfs(pha, ax_hold, bi_hold, maxn):
             que[i].poi = pha
             que[i + 1].poi = -1
             # 递归计算下一回合B的最大得分
-            tmp = dfs(pha + 1, ax_hold, bi_hold, rec - calc)
+            fson = dfs(pha + 1, Axel_hold, Birgit_hold, fo - calc)
             # 调整参数
-            rec = update(rec, calc - tmp)
-            que[i] = temp_que[i]
-            que[i + 1] = temp_que[i + 1]
+            fo = update(fo, calc, fson)
+            que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+            que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
             # 剪枝
             if pruning:
-                if maxn >= -rec:
-                    return rec 
+                if fo_calc >= -fo:
+                    return fo 
 
             # 若当前玩家A有“握牌”
-            if order[pha] == "Axel" and ax_hold != -1:
+            if order[pha] == "Axel" and Axel_hold != -1:
                 # 计算第i,i+1张牌和A握牌的三角形分数
-                calc = calc_digit(pha, que[i].poi, que[i + 1].poi, ax_hold) 
+                calc = calc_digit(pha, que[i].poi, que[i + 1].poi, Axel_hold) 
                 # 第pha张牌放入valley之间构成floor
                 que[i].dir = que[i + 1].dir = 0 
-                que[i].poi = ax_hold
+                que[i].poi = Axel_hold
                 que[i + 1].poi = -1
                 # 递归计算下一回合B的最大得分(A握住第pha张牌)
-                tmp = dfs(pha + 1, pha, bi_hold, rec - calc) 
+                fson = dfs(pha + 1, pha, Birgit_hold, fo - calc) 
                 # 第pha张牌放入valley之间构成floor
-                rec = update(rec, calc - tmp) 
+                fo = update(fo, calc, fson)
+                que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+                que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
             
-            elif order[pha] == "Birgit" and bi_hold != -1:
-                calc = calc_digit(pha, que[i].poi, que[i + 1].poi, bi_hold)
+            elif order[pha] == "Birgit" and Birgit_hold != -1:
+                calc = calc_digit(pha, que[i].poi, que[i + 1].poi, Birgit_hold)
                 que[i].dir = que[i + 1].dir = 0
-                que[i].poi = bi_hold
+                que[i].poi = Birgit_hold
                 que[i + 1].poi = -1
                 # 递归计算下一回合B的最大得分(A握住第pha张牌)
-                tmp = dfs(pha + 1, ax_hold, pha, rec - calc)
+                fson = dfs(pha + 1, Axel_hold, pha, fo - calc)
                 # 调整参数
-                rec = update(rec, calc - tmp)
+                fo = update(fo, calc, fson)
+                que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+                que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
             # 恢复递归之前的que
-            que[i] = temp_que[i]
-            que[i + 1] = temp_que[i + 1]
+            que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+            que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
             # 剪枝
             if pruning:
-                if maxn >= -rec: 
-                    return rec
+                if fo_calc >= -fo: 
+                    return fo
     
     # Peak操作
     for i in range(2, 7): 
         # 若第i,i+1个位置处于平放 PS:que.poi =-1 不能当peak的左端
         if que[i].dir == 0 and que[i + 1].dir == 0 and que[i].poi != -1 and que[i + 1].poi == -1:
             # 若当前玩家A有"握牌"
-            if order[pha] == "Axel"and ax_hold != -1:
+            if order[pha] == "Axel"and Axel_hold != -1:
                 # 计算第i个位置的牌,i+1张牌和A握牌的三角形分数
-                calc = calc_digit(pha, que[i].poi, ax_hold, pha)
+                calc = calc_digit(pha, que[i].poi, Axel_hold, pha)
                 # A的握牌放入第i + 1个位置，走牌放入第i个位置，形成peak
                 que[i].dir = 1
                 que[i + 1].dir = -1
                 que[i].poi = pha
-                que[i + 1].poi = ax_hold
+                que[i + 1].poi = Axel_hold
                 # 递归计算下一回合B的最大得分(A的握牌为空)
-                tmp = dfs(pha + 1, -1, bi_hold, rec - calc)
-                rec = update(rec, calc - tmp)
+                fson = dfs(pha + 1, -1, Birgit_hold, fo - calc)
+                fo = update(fo, calc, fson)
                 # 恢复递归前的值
-                que[i] = temp_que[i]
-                que[i + 1] = temp_que[i + 1]
+                que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+                que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
                 # 剪枝
                 if pruning:
-                    if maxn >= -rec:
-                        return rec
+                    if fo_calc >= -fo:
+                        return fo
                 # 计算第i, A握牌和走牌的三角形分数
-                calc = calc_digit(pha, que[i].poi, ax_hold, pha)
+                calc = calc_digit(pha, que[i].poi, Axel_hold, pha)
                 # A的握牌放入第i个位置，走牌放入第i + 1个位置，形成peak
                 que[i].dir = 1
                 que[i + 1].dir = -1
-                que[i].poi = ax_hold
+                que[i].poi = Axel_hold
                 que[i + 1].poi = pha
                 # 递归计算下一回合B的最大得分(A的握牌为空)
-                tmp = dfs(pha + 1, -1, bi_hold, rec - calc)
+                fson = dfs(pha + 1, -1, Birgit_hold, fo - calc)
                 # 调整参数
-                rec = update(rec, calc - tmp)
+                fo = update(fo, calc, fson)
                 # 恢复递归前的que
-                que[i] = temp_que[i]
-                que[i + 1] = temp_que[i + 1]
+                que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+                que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
                 # 剪枝
                 if pruning:
-                    if maxn >= -rec:
-                        return rec
+                    if fo_calc >= -fo:
+                        return fo
             # 若当前玩家为B且有握牌
-            elif order[pha] == "Birgit" and bi_hold != -1:
+            elif order[pha] == "Birgit" and Birgit_hold != -1:
                 # 计算第i个位置的牌、B的握牌和走牌的三角形分数
-                calc = calc_digit(pha, que[i].poi, bi_hold, pha)
+                calc = calc_digit(pha, que[i].poi, Birgit_hold, pha)
                 # B的握牌放入第i + 1个位置，走牌放入第i个位置，形成peak
                 que[i].dir = 1
                 que[i + 1].dir = -1
                 que[i].poi = pha
-                que[i + 1].poi = bi_hold
+                que[i + 1].poi = Birgit_hold
                 # 递归计算下一回合A的最大得分(B的握牌为空)
-                tmp = dfs(pha + 1, ax_hold, -1, rec - calc)
+                fson = dfs(pha + 1, Axel_hold, -1, fo - calc)
                 # 调整参数
-                rec = update(rec, calc - tmp)
+                fo = update(fo, calc, fson)
                 # 恢复递归前的que
-                que[i] = temp_que[i]
-                que[i + 1] = temp_que[i + 1]
+                que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+                que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
                 # 剪枝
                 if pruning:
-                    if maxn >= -rec:
-                        return rec
+                    if fo_calc >= -fo:
+                        return fo
                 # 计算第i个位置的牌, B握牌和走牌的三角形分数
-                calc = calc_digit(pha, que[i].poi, bi_hold, pha)
+                calc = calc_digit(pha, que[i].poi, Birgit_hold, pha)
                 # B 的握牌放入第i个位置，走牌放入第i + 1个位置，形成peak
-                que[i].poi = bi_hold
+                que[i].poi = Birgit_hold
                 que[i + 1].poi = pha
                 # 递归计算下一回合A的最大得分(B的握牌为空)
-                tmp = dfs(pha + 1, ax_hold, -1, rec - calc)
-                rec = update(rec, calc - tmp)
+                fson = dfs(pha + 1, Axel_hold, -1, fo - calc)
+                fo = update(fo, calc, fson)
                 # 恢复递归前的que
-                que[i] = temp_que[i]
-                que[i + 1] = temp_que[i + 1]
+                que[i].dir = temp_que[i].dir;que[i].poi = temp_que[i].poi
+                que[i + 1].dir = temp_que[i + 1].dir;que[i + 1].poi = temp_que[i + 1].poi
                 # 剪枝
                 if pruning:
-                    if maxn >= -rec:
-                        return rec
-    return rec
+                    if fo_calc >= -fo:
+                        return fo
+    return fo
 
 def main():
     global pruning
@@ -308,14 +311,10 @@ def main():
                 order[i] = "Axel"
             else:
                 order[i] = "Birgit"
-        
-        global node_count
-        global dot
-        node_count = 0
-        dot = Digraph(comment='Search Graph')
 
         # 计算name得分
         ans = dfs(9, -1, -1, -INF)
+
         if order[9] != name:
             ans *= -1
         if ans == 0 :

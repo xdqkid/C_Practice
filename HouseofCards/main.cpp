@@ -3,9 +3,10 @@
 #include <string.h>
 #include <ctime>
 using namespace std;
-bool REC_TIME = true;
-bool PRUNING = false;
-// bool PRUNING = true;
+// bool REC_TIME = true;
+bool REC_TIME = false;
+// bool PRUNING = false;
+bool PRUNING = true;
 struct data_que
 {
 	int dir;
@@ -19,22 +20,22 @@ struct data_card
 }card[30];
 string order[30];
 int INF = 100000, n;
-int calc_hold_card(int ax_hold,int bi_hold)
+int calc_hold_card(int Axel_hold,int Birgit_hold)
 {
 	int s = 0;
-	if (ax_hold != -1)
+	if (Axel_hold != -1)
 	{
-		if (card[ax_hold].col == 'R')
-			s += card[ax_hold].dig;
+		if (card[Axel_hold].col == 'R')
+			s += card[Axel_hold].dig;
 		else 
-			s -= card[ax_hold].dig;
+			s -= card[Axel_hold].dig;
 	}
-	if (bi_hold != -1)
+	if (Birgit_hold != -1)
 	{
-		if (card[bi_hold].col == 'B')
-			s -= card[bi_hold].dig;
+		if (card[Birgit_hold].col == 'B')
+			s -= card[Birgit_hold].dig;
 		else 
-			s += card[bi_hold].dig;
+			s += card[Birgit_hold].dig;
 	}
 	return s;
 }
@@ -77,11 +78,11 @@ int calc_digit(int pha, int pl, int p2, int p3)
 	}
 }
 
-int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
+int dfs(int pha, int Axel_hold, int Birgit_hold, int fo_calc)
 {
 	if (pha > 2 * n)
 	{
-		int s = calc_hold_card(ax_hold, bi_hold);
+		int s = calc_hold_card(Axel_hold, Birgit_hold);
 		if (order[pha] == "Axel")
 			return s;
 		else 
@@ -93,13 +94,13 @@ int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
 	fo = -INF;
 	memcpy(temp_que, que, sizeof(que));
 	fson = INF;
-	if (order[pha] == "Axel" && ax_hold == -1)
+	if (order[pha] == "Axel" && Axel_hold == -1)
 	{
-		fson = dfs(pha + 1, pha, bi_hold, fo);
+		fson = dfs(pha + 1, pha, Birgit_hold, fo);
 	}
-	else if(order[pha] == "Birgit" && bi_hold == -1)
+	else if(order[pha] == "Birgit" && Birgit_hold == -1)
 	{
-		fson = dfs(pha + 1, ax_hold, pha, fo);
+		fson = dfs(pha + 1, Axel_hold, pha, fo);
 	}
 	update(fo, calc, fson);
 	if (PRUNING)
@@ -114,31 +115,31 @@ int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
 			que[i].dir = que[i + 1].dir = 0;
 			que[i].poi = pha;
 			que[i + 1].poi = -1;
-			fson = dfs(pha + 1, ax_hold, bi_hold, fo - calc);
+			fson = dfs(pha + 1, Axel_hold, Birgit_hold, fo - calc);
 			update(fo, calc ,fson);
 			que[i] = temp_que[i];
 			que[i + 1] = temp_que[i + 1];
 			if (PRUNING)
 				if (fo_calc >= -fo)
 					return fo;
-			if (order[pha] == "Axel" && ax_hold != -1)
+			if (order[pha] == "Axel" && Axel_hold != -1)
 			{
-				calc = calc_digit(pha, que[i].poi, que[i + 1].poi, ax_hold);
+				calc = calc_digit(pha, que[i].poi, que[i + 1].poi, Axel_hold);
 				que[i].dir = que[i + 1].dir = 0;
-				que[i].poi = ax_hold;
+				que[i].poi = Axel_hold;
 				que[i + 1].poi = -1;
-				fson = dfs(pha + 1, pha, bi_hold, fo - calc);
+				fson = dfs(pha + 1, pha, Birgit_hold, fo - calc);
 				update(fo, calc, fson);
 				que[i] = temp_que[i];
 				que[i + 1] = temp_que[i + 1];
 			}
-			else if (order[pha] == "Birgit" && bi_hold != -1)
+			else if (order[pha] == "Birgit" && Birgit_hold != -1)
 			{
-				calc = calc_digit(pha, que[i].poi, que[i + 1].poi, bi_hold);
+				calc = calc_digit(pha, que[i].poi, que[i + 1].poi, Birgit_hold);
 				que[i].dir = que[i + 1].dir = 0;
-				que[i].poi = bi_hold;
+				que[i].poi = Birgit_hold;
 				que[i + 1].poi = -1;
-				fson = dfs(pha + 1, ax_hold, pha, fo - calc);
+				fson = dfs(pha + 1, Axel_hold, pha, fo - calc);
 				update(fo, calc, fson);
 				que[i] = temp_que[i];
 				que[i + 1] = temp_que[i + 1];
@@ -155,15 +156,15 @@ int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
 	{
 		if (que[i].dir == 0 && que[i + 1].dir == 0 && que[i].poi != -1 && que[i + 1].poi == -1)
 		{
-			if (order[pha] == "Axel" && ax_hold != -1)
+			if (order[pha] == "Axel" && Axel_hold != -1)
 			{
-				calc = calc_digit(pha, que[i].poi, ax_hold, pha);
+				calc = calc_digit(pha, que[i].poi, Axel_hold, pha);
 				que[i].dir = 1;
 				que[i + 1].dir = -1;
 				que[i].poi = pha;
-				que[i + 1].poi = ax_hold;
+				que[i + 1].poi = Axel_hold;
 				
-				fson = dfs(pha + 1, -1, bi_hold, fo - calc); 
+				fson = dfs(pha + 1, -1, Birgit_hold, fo - calc); 
 				update(fo, calc, fson);
 				que[i] = temp_que[i];
 				que[i + 1] = temp_que[i + 1];
@@ -171,12 +172,12 @@ int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
 					if (fo_calc >= -fo)
 						return fo;
 
-				calc = calc_digit(pha, que[i].poi, ax_hold, pha);
+				calc = calc_digit(pha, que[i].poi, Axel_hold, pha);
 				que[i].dir = 1;
 				que[i + 1].dir = -1;
-				que[i].poi = ax_hold;
+				que[i].poi = Axel_hold;
 				que[i + 1].poi = pha;
-				fson = dfs(pha + 1, -1, bi_hold, fo - calc);
+				fson = dfs(pha + 1, -1, Birgit_hold, fo - calc);
 				update(fo, calc, fson);
 				que[i] = temp_que[i];
 				que[i + 1] = temp_que[i + 1];
@@ -184,14 +185,14 @@ int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
 					if (fo_calc >= -fo)
 						return fo;
 			}
-			else if (order[pha] == "Birgit" && bi_hold != -1)
+			else if (order[pha] == "Birgit" && Birgit_hold != -1)
 			{
-				calc = calc_digit(pha, que[i].poi, bi_hold, pha);
+				calc = calc_digit(pha, que[i].poi, Birgit_hold, pha);
 				que[i].dir = 1;
 				que[i + 1].dir = -1;
 				que[i].poi = pha;
-				que[i + 1].poi = bi_hold;
-				fson = dfs(pha + 1, ax_hold, -1, fo - calc);
+				que[i + 1].poi = Birgit_hold;
+				fson = dfs(pha + 1, Axel_hold, -1, fo - calc);
 				update(fo, calc, fson);
 				que[i] = temp_que[i];
 				que[i + 1] = temp_que[i + 1];
@@ -199,10 +200,10 @@ int dfs(int pha, int ax_hold, int bi_hold, int fo_calc)
 					if (fo_calc >= -fo)
 						return fo;
 
-				calc = calc_digit(pha, que[i].poi, bi_hold, pha);
-				que[i].poi = bi_hold;
+				calc = calc_digit(pha, que[i].poi, Birgit_hold, pha);
+				que[i].poi = Birgit_hold;
 				que[i + 1].poi = pha;
-				fson = dfs(pha + 1, ax_hold, -1, fo - calc);
+				fson = dfs(pha + 1, Axel_hold, -1, fo - calc);
 				update(fo, calc, fson);
 				que[i] = temp_que[i];
 				que[i + 1] = temp_que[i + 1];
